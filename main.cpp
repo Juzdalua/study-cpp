@@ -1,21 +1,18 @@
 #include <iostream>
+#include <stdio.h>
+#include "func.h"
 
 using namespace std;
 
-#define ABC 1;
-int main(){
-    cout << "Hello, World!" << endl;
-    cout << "Hello, World!" << endl;
-    cout << "Hello, World!" << endl;
+int main()
+{
+    printf("HELLO \n");
 
-    unsigned char a = 1;
- 
-
-    cout << "A: " << a << endl;
-    cout << "Hello, World!" << endl;
+    int a = func::Add(1, 2);
+    printf("A: %d \n", a);
     
-    int abc = ABC;
-    cout << abc << flush;
+    printf("WORLD \n");
 
     return 0;
 }
+

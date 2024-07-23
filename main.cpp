@@ -1,18 +1,21 @@
-#include <iostream>
 #include <stdio.h>
-#include "func.h"
+#include <iostream>
+#include "./include/arr.h"
+// #include "arr.h"
 
 using namespace std;
 
 int main()
 {
-    printf("HELLO \n");
+    jArr _jArr = {};
+    InitJArr(&_jArr);
 
-    int a = func::Add(1, 2);
-    printf("A: %d \n", a);
-    
-    printf("WORLD \n");
+    for (int i = 0; i < 10; i++)
+    {
+        PushJArr(&_jArr, i);
+    }
+
+    RelaseJArr(&_jArr);
 
     return 0;
 }
-

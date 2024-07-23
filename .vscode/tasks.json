@@ -8,7 +8,8 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${workspaceFolder}\\*.cpp",
-                "${workspaceFolder}\\include\\*.cpp",
+                "${workspaceFolder}\\include\\Array\\*.cpp",
+                "${workspaceFolder}\\include\\LinkedList\\*.cpp",
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],

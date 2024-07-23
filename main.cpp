@@ -1,21 +1,19 @@
 #include <stdio.h>
 #include <iostream>
-#include "./include/arr.h"
-// #include "arr.h"
+#include "./include/LinkedList/linkedList.h"
 
 using namespace std;
 
 int main()
 {
-    jArr _jArr = {};
-    InitJArr(&_jArr);
+    LinkedList list = {};
+    InitList(&list);
 
-    for (int i = 0; i < 10; i++)
-    {
-        PushJArr(&_jArr, i);
-    }
+    LPushList(&list, 100);
+    LPushList(&list, 200);
+    LPushList(&list, 300);
 
-    RelaseJArr(&_jArr);
+    ReleaseList(&list);
 
     return 0;
 }

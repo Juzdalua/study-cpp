@@ -1,5 +1,6 @@
 #include "arr.h"
 #include <iostream>
+#include <cassert>
 
 void InitJArr(jArr *_jArr)
 {
@@ -15,7 +16,7 @@ void RelaseJArr(jArr *_jArr)
     free(_jArr->pInt);
 };
 
- // 힙 메모리 주소 재정의 함수
+// 힙 메모리 주소 재정의 함수
 void RelocateJArr(jArr *_jArr)
 {
     // 새로운 힙 영역 생성
@@ -46,4 +47,49 @@ void PushJArr(jArr *_jArr, int data)
 
     _jArr->pInt[_jArr->count] = data;
     _jArr->count++;
+}
+
+// ---------------------------
+CArr::CArr() : pData(nullptr),
+               count(0), maxCount(1)
+{
+    pData = new int[1];
+}
+
+CArr::~CArr()
+{
+    delete[] pData;
+}
+
+void CArr::RPush(int data)
+{
+    if (this->maxCount <= this->count)
+    {
+        resize(this->maxCount * 2);
+    }
+    this->pData[this->count] = data;
+    this->count++;
+}
+
+void CArr::resize(int resizeCount = 1)
+{
+    if (this->maxCount >= resizeCount)
+    {
+        assert(false);
+    }
+
+    int *pNewData = new int[resizeCount];
+    for (int i = 0; i < this->count; i++)
+    {
+        pNewData[i] = this->pData[i];
+    }
+    delete[] this->pData;
+
+    this->pData = pNewData;
+    this->maxCount = resizeCount;
+}
+
+int &CArr::operator[](int idx)
+{
+    return this->pData[idx];
 }

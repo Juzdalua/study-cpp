@@ -1,6 +1,6 @@
 #include "arr.h"
 #include <iostream>
-#include <cassert>
+#include <assert.h>
 
 void InitJArr(jArr *_jArr)
 {

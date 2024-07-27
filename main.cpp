@@ -1,16 +1,36 @@
 #include <stdio.h>
 #include <iostream>
-#include "./include/Template/arrayList.h"
+#include <set>
 
 using namespace std;
 
 int main()
 {
-    CList<int> list;
+    set<int> intSet;
+    intSet.insert(10);
+    intSet.insert(99);
+    intSet.insert(4);
+    intSet.insert(1);
 
-    list.RPush(1);
-    list.RPush(2);
-    list.RPush(3);
+    set<int>::iterator intSetIter;
+    for(intSetIter = intSet.begin(); intSetIter != intSet.end(); intSetIter++){
+        cout << *intSetIter << endl;
+    }
+    
+    set<char> charSet;
+    charSet.insert('A');
+    charSet.insert('a');
+    charSet.insert('C');
+    charSet.insert('f');
+
+    set<char>::iterator charSetIter;
+    for(charSetIter = charSet.begin(); charSetIter != charSet.end(); charSetIter++){
+        cout << *charSetIter << endl;
+    }
+
+    if(charSet.find('A') != charSet.end()){
+        charSet.erase('A');
+    }
 
     return 0;
 }

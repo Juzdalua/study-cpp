@@ -1,16 +1,16 @@
 #include <stdio.h>
 #include <iostream>
-#include "./include/Template/class.h"
+#include "./include/Template/arrayList.h"
 
 using namespace std;
 
 int main()
 {
-    CArr<int> cArr;
-    cArr.RPush(1);
-    cArr.RPush(2);
-    cArr.RPush(3);
+    CList<int> list;
 
+    list.RPush(1);
+    list.RPush(2);
+    list.RPush(3);
 
     return 0;
 }

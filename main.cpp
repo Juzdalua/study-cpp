@@ -1,30 +1,44 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
+#include <mutex>
 
-atomic<int> sum = 0;
+vector<int> v;
+mutex m;
 
-void Add() {
-	for (int i = 0; i < 1'000'000; i++) {
-		sum.fetch_add(1);
+// RAII (Resource Acquisition is Initialization)
+template <typename T>
+class LockGuard {
+public:
+	LockGuard(T& m) {
+		_mutex = &m;
+		_mutex->lock();
+	}
+	~LockGuard() {
+		_mutex->unlock();
+	}
+
+private:
+	T* _mutex;
+};
+
+void Push() {
+	for (int i = 0; i < 10'000; i++) {
+		//LockGuard<mutex> lockGuard(m);
+		lock_guard<mutex> lockGuard(m); // std 표준에도 존재하는 클래스 템플릿이다.
+		v.push_back(i);
 	}
 }
 
-void Sub() {
-	for (int i = 0; i < 1'000'000; i++) {
-		sum.fetch_sub(1);
-	}
-}
-
-int main() // 메인 스레드
+int main()
 {
-	Add();
-	Sub();
-	cout << sum << endl;
+	thread t1(Push);
+	thread t2(Push);
 
-	thread t1(Add);
-	thread t2(Sub);
 	t1.join();
 	t2.join();
-	cout << sum << endl;
+
+	cout << v.size() << endl;
+
+	return 0;
 }

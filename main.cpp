@@ -21,6 +21,27 @@ private:
 	atomic<bool> _locked = false;
 };
 
+class SleepLock {
+public:
+	void lock() {
+		bool expected = false; // before
+		bool desired = true; // after
+
+		while (_locked.compare_exchange_strong(expected, desired) == false) {
+			expected = false;
+
+			this_thread::sleep_for(0ms);
+		}
+	}
+	void unlock() {
+		//_locked = false;
+		_locked.store(false);
+	}
+private:
+	atomic<bool> _locked = false;
+};
+
+
 SpinLock spinLock;
 int sum = 0;
 

@@ -1,44 +1,51 @@
 #include <iostream>
 #include <thread>
-#include <atomic>
 #include <mutex>
+#include <atomic>
 
-vector<int> v;
-mutex m;
-
-// RAII (Resource Acquisition is Initialization)
-template <typename T>
-class LockGuard {
+class SpinLock {
 public:
-	LockGuard(T& m) {
-		_mutex = &m;
-		_mutex->lock();
-	}
-	~LockGuard() {
-		_mutex->unlock();
-	}
+	void lock() {
+		bool expected = false; // before
+		bool desired = true; // after
 
+		while (_locked.compare_exchange_strong(expected, desired) == false) {
+			expected = false;
+		}
+	}
+	void unlock() {
+		//_locked = false;
+		_locked.store(false);
+	}
 private:
-	T* _mutex;
+	atomic<bool> _locked = false;
 };
 
-void Push() {
-	for (int i = 0; i < 10'000; i++) {
-		//LockGuard<mutex> lockGuard(m);
-		lock_guard<mutex> lockGuard(m); // std 표준에도 존재하는 클래스 템플릿이다.
-		v.push_back(i);
+SpinLock spinLock;
+int sum = 0;
+
+void Add() {
+	for (int i = 0; i < 1'000'000; i++) {
+		lock_guard<SpinLock> guard(spinLock);
+		sum++;
 	}
 }
 
+void Sub() {
+	for (int i = 0; i < 1'000'000; i++) {
+		lock_guard<SpinLock> guard(spinLock);
+		sum--;
+	}
+}
+
+
 int main()
 {
-	thread t1(Push);
-	thread t2(Push);
-
+	thread t1(Add);
+	thread t2(Sub);
 	t1.join();
 	t2.join();
-
-	cout << v.size() << endl;
+	cout << "SpinLock: " << sum << endl;
 
 	return 0;
 }

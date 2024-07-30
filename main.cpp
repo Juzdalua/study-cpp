@@ -1,39 +1,45 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
-#include <future>
-#include <windows.h>
+#include <atomic>
 
-int buffer[10'000][10'000];
+atomic<bool> ready;
+int value;
+
+void Producer() {
+	value = 10;
+	ready.store(true, memory_order::memory_order_seq_cst);
+}
+
+void Consumer() {
+	while (ready.load(memory_order::memory_order_seq_cst) == false)
+		;
+	cout << value << endl;
+}
+
+void Producer_Relase() {
+	value = 10;
+	ready.store(true, memory_order::memory_order_release);
+	// ------------- 절취선 --------------------
+}
+
+void Consumer_Acquire() {
+	// ------------- 절취선 --------------------
+	while (ready.load(memory_order::memory_order_acquire) == false)
+		;
+	cout << value << endl;
+}
 
 int main()
 {
-	memset(buffer, 0, sizeof(buffer));
-	{
-		unsigned int start = GetTickCount64();
+	ready = false;
+	value = 0;
 
-		int sum = 0;
-		for (int i = 0; i < 10'000; i++)
-			for (int j = 0; j < 10'000; j++)
-				sum += buffer[i][j];
+	thread t1(Producer);
+	thread t2(Consumer);
+	t1.join();
+	t2.join();
 
-		unsigned int end = GetTickCount64();
-
-		cout << "Elapsed Tick: " << (end - start) << endl;
-	}
-
-	{
-		unsigned int start = GetTickCount64();
-
-		int sum = 0;
-		for (int i = 0; i < 10'000; i++)
-			for (int j = 0; j < 10'000; j++)
-				sum += buffer[j][i];
-
-		unsigned int end = GetTickCount64();
-
-		cout << "Elapsed Tick: " << (end - start) << endl;
-
-		return 0;
-	}
+	atomic_thread_fence(memory_order::memory_order_release);
+	atomic_thread_fence(memory_order::memory_order_acquire);
 }

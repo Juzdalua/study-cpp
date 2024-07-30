@@ -1,46 +1,39 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <future>
+#include <windows.h>
 
-mutex m;
-queue<int> q;
-condition_variable cv;
-
-void Producer() {
-	while (true) {
-		{
-			/*
-				1. Lock을 잡고
-				2. 공유 변수 값을 수정
-				3. Lock을 풀고
-				4. 조건변수를 통해 다른 스레드에게 통지
-			*/
-			unique_lock<mutex> lock(m);
-			q.push(100);
-		}
-		cv.notify_one(); // wait중인 스레드 1개를 깨운다.
-	}
-
-}
-
-void Consumer() {
-	while (true) {
-		unique_lock<mutex> lock(m);
-		cv.wait(lock, []() {return q.empty() == false;});
-
-		int data = q.front();
-		q.pop();
-		cout << data << endl;
-	}
-}
+int buffer[10'000][10'000];
 
 int main()
 {
-	thread t1(Producer);
-	thread t2(Consumer);
+	memset(buffer, 0, sizeof(buffer));
+	{
+		unsigned int start = GetTickCount64();
 
-	t1.join();
-	t2.join();
+		int sum = 0;
+		for (int i = 0; i < 10'000; i++)
+			for (int j = 0; j < 10'000; j++)
+				sum += buffer[i][j];
 
-	return 0;
+		unsigned int end = GetTickCount64();
+
+		cout << "Elapsed Tick: " << (end - start) << endl;
+	}
+
+	{
+		unsigned int start = GetTickCount64();
+
+		int sum = 0;
+		for (int i = 0; i < 10'000; i++)
+			for (int j = 0; j < 10'000; j++)
+				sum += buffer[j][i];
+
+		unsigned int end = GetTickCount64();
+
+		cout << "Elapsed Tick: " << (end - start) << endl;
+
+		return 0;
+	}
 }

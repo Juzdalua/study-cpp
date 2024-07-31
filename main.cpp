@@ -3,43 +3,28 @@
 #include <mutex>
 #include <atomic>
 
-atomic<bool> ready;
-int value;
+thread_local int LThreadId = 0;
 
-void Producer() {
-	value = 10;
-	ready.store(true, memory_order::memory_order_seq_cst);
-}
+void ThreadMain(int threadId) {
+	LThreadId = threadId;
 
-void Consumer() {
-	while (ready.load(memory_order::memory_order_seq_cst) == false)
-		;
-	cout << value << endl;
-}
-
-void Producer_Relase() {
-	value = 10;
-	ready.store(true, memory_order::memory_order_release);
-	// ------------- 절취선 --------------------
-}
-
-void Consumer_Acquire() {
-	// ------------- 절취선 --------------------
-	while (ready.load(memory_order::memory_order_acquire) == false)
-		;
-	cout << value << endl;
+	while (true) {
+		cout << LThreadId << endl;
+		this_thread::sleep_for(1s);
+	}
 }
 
 int main()
 {
-	ready = false;
-	value = 0;
+	thread t;
+	t.get_id();
 
-	thread t1(Producer);
-	thread t2(Consumer);
-	t1.join();
-	t2.join();
+	vector<thread> threads;
+	for (int i = 0; i < 10; i++) {
+		int threadId = i + 1;
+		threads.push_back(thread(ThreadMain, threadId));
+	}
 
-	atomic_thread_fence(memory_order::memory_order_release);
-	atomic_thread_fence(memory_order::memory_order_acquire);
+	for (thread& t : threads)
+		t.join();
 }

@@ -3,28 +3,37 @@
 #include <mutex>
 #include <atomic>
 
-thread_local int LThreadId = 0;
-
-void ThreadMain(int threadId) {
-	LThreadId = threadId;
-
-	while (true) {
-		cout << LThreadId << endl;
-		this_thread::sleep_for(1s);
+class PointClass
+{
+public:
+	PointClass(int _x, int _y) : x(_x), y(_y) {};
+	bool operator==(PointClass &ref)
+	{
+		if (this->x == ref.x && this->y == ref.y)
+			return true;
+		return false;
 	}
-}
+	PointClass operator++()
+	{
+		this->x++;
+		this->y++;
+
+		return *this;
+	}
+
+private:
+	int x, y;
+};
 
 int main()
 {
-	thread t;
-	t.get_id();
+	PointClass p1(2, 3);
+	PointClass p2(2, 3);
 
-	vector<thread> threads;
-	for (int i = 0; i < 10; i++) {
-		int threadId = i + 1;
-		threads.push_back(thread(ThreadMain, threadId));
-	}
+	if (p1 == p2)
+		printf("true");
 
-	for (thread& t : threads)
-		t.join();
+	++p1;
+
+	return 0;
 }

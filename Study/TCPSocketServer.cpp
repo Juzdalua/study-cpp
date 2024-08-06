@@ -37,7 +37,8 @@ int main()
 	}
 
 	// listen
-	if (listen(listenSocket, 10) == SOCKET_ERROR)
+	int MAX_LIMIT_SOCKET = 10;
+	if (listen(listenSocket, MAX_LIMIT_SOCKET) == SOCKET_ERROR)
 	{
 		int errCode = WSAGetLastError();
 		cout << "Listen ErrorCode: " << errCode << endl;

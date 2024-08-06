@@ -27,8 +27,8 @@ int main()
         cout << "Socket ErrorCode: " << errCode << endl;
         return 0;
     }
-    
-    // 2. IP, PORT 설정 
+
+    // 2. IP, PORT 설정
     char IP[] = "127.0.0.1";
     u_short PORT = 7777;
 
@@ -37,7 +37,7 @@ int main()
 
     serverAddr.sin_family = AF_INET;
 
-    //serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); <- deprecated
+    // serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); <- deprecated
     inet_pton(AF_INET, IP, &serverAddr.sin_addr);
 
     serverAddr.sin_port = htons(PORT);
@@ -49,7 +49,7 @@ int main()
     */
 
     // 3. Socket 연결
-    if (connect(clientSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    if (connect(clientSocket, (SOCKADDR *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
     {
         int errCode = WSAGetLastError();
         cout << "Socket ErrorCode: " << errCode << endl;
@@ -61,6 +61,30 @@ int main()
     // 4. 데이터 송수신
     while (true)
     {
+        char sendBuffer[100] = "Hello World!";
+        int resultCode = send(clientSocket, sendBuffer, sizeof(sendBuffer), 0);
+        if (resultCode == SOCKET_ERROR)
+        {
+            int errCode = WSAGetLastError();
+            cout << "Send ErrorCode: " << errCode << endl;
+            return 0;
+        }
+
+        cout << "Send Data! Len = " << sizeof(sendBuffer) << endl;
+
+        // Echo Receiver
+        char recvBuffer[1000];
+        int recvLen = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+        if (recvLen <= 0)
+        {
+            int errCode = WSAGetLastError();
+            cout << "Recv ErrorCode: " << errCode << endl;
+            return 0;
+        }
+
+        cout << "Recv Data! Len = " << recvLen << endl;
+        cout << "Recv Data! Data = " << recvBuffer << endl;
+
         this_thread::sleep_for(1s);
     }
 

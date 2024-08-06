@@ -29,7 +29,7 @@ int main()
 	serverAddr.sin_port = htons(PORT);
 
 	// bind
-	if (::bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+	if (::bind(listenSocket, (SOCKADDR *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
 	{
 		int errCode = WSAGetLastError();
 		cout << "Bind ErrorCode: " << errCode << endl;
@@ -49,8 +49,8 @@ int main()
 		SOCKADDR_IN clientAddr;
 		memset(&clientAddr, 0, sizeof(clientAddr));
 		int addrLen = sizeof(clientAddr);
-		
-		SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
+
+		SOCKET clientSocket = accept(listenSocket, (SOCKADDR *)&clientAddr, &addrLen);
 		if (clientSocket == INVALID_SOCKET)
 		{
 			int errCode = WSAGetLastError();
@@ -62,6 +62,27 @@ int main()
 		char ipAddress[16];
 		inet_ntop(AF_INET, &clientAddr.sin_addr, ipAddress, sizeof(ipAddress));
 		cout << "Client Connected! IP: " << ipAddress << endl;
+
+		char recvBuffer[1000];
+		int recvLen = recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+		if (recvLen <= 0)
+		{
+			int errCode = WSAGetLastError();
+			cout << "Recv ErrorCode: " << errCode << endl;
+			return 0;
+		}
+
+		cout << "Recv Data! Len = " << recvLen << endl;
+		cout << "Recv Data! Data = " << recvBuffer << endl;
+
+		// Echo Server
+		int resultCode = send(clientSocket, recvBuffer, recvLen, 0);
+		if (resultCode == SOCKET_ERROR)
+		{
+			int errCode = WSAGetLastError();
+			cout << "Send ErrorCode: " << errCode << endl;
+			return 0;
+		}
 	}
 
 	WSACleanup();

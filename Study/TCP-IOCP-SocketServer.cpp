@@ -9,124 +9,163 @@
 
 using namespace std;
 
+// Error
+void HandleError(const char* cause)
+{
+	cout << "Error: " << cause << endl;
+}
+
+// Session
 const int BUFSIZE = 1'000;
 struct Session
 {
-    SOCKET socket = INVALID_SOCKET;
-    char recvBuffer[BUFSIZE] = {};
-    int recvBytes = 0;
+	SOCKET socket = INVALID_SOCKET;
+	char recvBuffer[BUFSIZE] = {};
+	int recvBytes = 0;
 };
 
+// Overlapped
 enum IO_TYPE
 {
-    READ,
-    WRITE,
-    ACCEPT,
-    CONNECT,
+	READ,
+	WRITE,
+	ACCEPT,
+	CONNECT,
 };
 
 struct OverlappedEx
 {
-    WSAOVERLAPPED overlapped = {};
-    int type = 0; // IO_TYPE
+	WSAOVERLAPPED overlapped = {};
+	int type = 0; // IO_TYPE
 };
 
-// 5. 입출력 함수 완료후 소켓을 다룰 스레드 정의
+// Worker Thread
 void WorkerThreadMain(HANDLE iocpHandle)
 {
-    while (true)
-    {
-        DWORD bytesTransfered = 0;
-        Session *session = nullptr;
-        OverlappedEx *overlappedEx = nullptr;
+	while (true)
+	{
+		DWORD bytesTransfered = 0;
+		Session* session = nullptr;
+		OverlappedEx* overlappedEx = nullptr;
 
-        // INFINITE -> 일감이 있을 때까지 대기
-        BOOL ret = GetQueuedCompletionStatus(iocpHandle, &bytesTransfered, (ULONG_PTR *)&session, (LPOVERLAPPED *)&overlappedEx, INFINITE);
+		// Find Job
+		BOOL ret = GetQueuedCompletionStatus(iocpHandle, &bytesTransfered, (ULONG_PTR*)&session, (LPOVERLAPPED*)&overlappedEx, INFINITE);
+		if (ret == FALSE || bytesTransfered == 0)
+		{
+			continue;
+		}
+		cout << "Recv Data Len: " << bytesTransfered << endl;
 
-        if (ret == FALSE || bytesTransfered == 0)
-        {
-            // TODO: 연결 끊김
-            continue;
-        }
+		WSABUF wsaBuf;
+		wsaBuf.buf = session->recvBuffer;
+		wsaBuf.len = BUFSIZE;
 
-        cout << "Recv Data IOCP = " << bytesTransfered << endl;
+		cout << "Recv Data: " << wsaBuf.buf << endl;
 
-        // 6. 다시 입출력 함수를 사용
-        WSABUF wsaBuf;
-        wsaBuf.buf = session->recvBuffer;
-        wsaBuf.len = BUFSIZE;
+		// Echo
+		DWORD numsOfBytes = 0;
+		if (WSASend(session->socket, &wsaBuf, 1, &numsOfBytes, 0, nullptr, nullptr) == SOCKET_ERROR)
+		{
+			int errorCode = WSAGetLastError();
+			if (errorCode != WSA_IO_PENDING)
+			{
+				HandleError("Echo Send Error");
+				continue;
+			}
+		}
 
-        DWORD recvLen = 0;
-        DWORD flags = 0;
-        WSARecv(session->socket, &wsaBuf, 1, &recvLen, &flags, &overlappedEx->overlapped, NULL);
-    }
+		// Wait Recv
+		DWORD recvLen = 0;
+		DWORD flags = 0;
+		WSARecv(session->socket, &wsaBuf, 1, OUT &recvLen, OUT &flags, &overlappedEx->overlapped, NULL);
+	}
 }
 
+// Main
 int main()
 {
-    WSAData wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-        return 0;
+	// 1. WSAStartup
+	WSAData wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		HandleError("WSAStartup");
+		return 0;
+	}
 
-    SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenSocket == INVALID_SOCKET)
-        return 0;
+	// 2. TCP Socket Set
+	SOCKET listenSocket = socket(AF_INET, SOCK_STREAM,IPPROTO_TCP);
+	if (listenSocket == INVALID_SOCKET)
+	{
+		HandleError("listenSocket");
+		return 0;
+	}
 
-    SOCKADDR_IN serverAddr;
-    memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddr.sin_port = htons(7777);
+	// 3. Server Set
+	SOCKADDR_IN serverAddr;
+	memset(&serverAddr, 0, sizeof(serverAddr));
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serverAddr.sin_port = htons(7777);
 
-    if (::bind(listenSocket, (SOCKADDR *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
-        return 0;
+	// 4. Bind
+	if (::bind(listenSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+	{
+		HandleError("Bind");
+		return 0;
+	}
 
-    if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
-        return 0;
+	// 5. Listen
+	if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR)
+	{
+		HandleError("Listen");
+		return 0;
+	}
 
-    cout << "Accept" << endl;
+	cout << "Accept" << endl;
 
-    vector<Session *> sessionManager;
+	vector<Session*> sessionManager;
 
-    // 1. CP 생성
-    HANDLE iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
-    // 4. 입출력 함수 완료 후 소켓을 다룰 스레드. WorkerThreads
-    thread t1(WorkerThreadMain, iocpHandle);
+	// 6. IOCP Handle Set
+	HANDLE iocpHandle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
-    // Main Thread = Accept 담당
-    while (true)
-    {
-        SOCKADDR_IN clientAddr;
-        int addrLen = sizeof(clientAddr);
-        SOCKET clientSocket = accept(listenSocket, (SOCKADDR *)&clientAddr, &addrLen);
-        if (clientSocket == INVALID_SOCKET)
-            return 0;
+	thread t1(WorkerThreadMain, iocpHandle);
 
-        Session *session = new Session();
-        session->socket = clientSocket;
-        sessionManager.push_back(session);
+	while (true)
+	{
+		// 7. Accept Client Socket
+		SOCKADDR_IN clientAddr;
+		int addrLen = sizeof(clientAddr);
+		SOCKET clientSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &addrLen);
+		if (clientSocket == INVALID_SOCKET) {
+			HandleError("Accept");
+			return 0;
+		}
 
-        cout << "Client Connectec!" << endl;
+		Session* session = new Session();
+		session->socket = clientSocket;
+		sessionManager.push_back(session);
 
-        // 2. 소켓을 CP에 등록
-        CreateIoCompletionPort((HANDLE)clientSocket, iocpHandle, /*Key*/ (ULONG_PTR)session, 0);
+		cout << "Client Connected" << endl;
 
-        WSABUF wsaBuf;
-        wsaBuf.buf = session->recvBuffer;
-        wsaBuf.len = BUFSIZE;
+		// 8. Register Client Socket to IOCP
+		CreateIoCompletionPort((HANDLE)clientSocket, iocpHandle, /*key*/(ULONG_PTR)session, 0);
 
-        DWORD recvLen = 0;
-        DWORD flags = 0;
+		WSABUF wsaBuf;
+		wsaBuf.buf = session->recvBuffer;
+		wsaBuf.len = BUFSIZE;
 
-        OverlappedEx *overlappedEx = new OverlappedEx();
-        overlappedEx->type = IO_TYPE::READ;
+		DWORD recvLen = 0;
+		DWORD flags = 0;
 
-        // 3. 소켓 처리 등록 후 메인스레드 종료.
-        WSARecv(clientSocket, &wsaBuf, 1, &recvLen, &flags, &overlappedEx->overlapped, NULL);
-    }
+		OverlappedEx* overlappedEx = new OverlappedEx();
+		overlappedEx->type = IO_TYPE::READ;
 
-    if (t1.joinable())
-        t1.join();
-    WSACleanup();
+		// 9. WSARecv
+		WSARecv(clientSocket, &wsaBuf, 1, &recvLen, &flags, &overlappedEx->overlapped, NULL);
+	}
+
+	if (t1.joinable())
+		t1.join();
+
+	WSACleanup();
 }
